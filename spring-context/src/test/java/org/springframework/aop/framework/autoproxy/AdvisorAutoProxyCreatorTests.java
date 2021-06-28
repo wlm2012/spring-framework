@@ -121,6 +121,7 @@ public class AdvisorAutoProxyCreatorTests {
 	 */
 	@Test
 	public void testCustomTargetSourceNoMatch() throws Exception {
+		//debug
 		BeanFactory bf = new ClassPathXmlApplicationContext(CUSTOM_TARGETSOURCE_CONTEXT, CLASS);
 		ITestBean test = (ITestBean) bf.getBean("test");
 		assertThat(AopUtils.isAopProxy(test)).isFalse();
