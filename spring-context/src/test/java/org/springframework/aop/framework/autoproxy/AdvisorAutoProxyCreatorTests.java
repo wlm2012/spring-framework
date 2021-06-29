@@ -76,6 +76,7 @@ public class AdvisorAutoProxyCreatorTests {
 	 */
 	@Test
 	public void testCommonInterceptorAndAdvisor() throws Exception {
+		//debug
 		BeanFactory bf = new ClassPathXmlApplicationContext(COMMON_INTERCEPTORS_CONTEXT, CLASS);
 		ITestBean test1 = (ITestBean) bf.getBean("test1");
 		assertThat(AopUtils.isAopProxy(test1)).isTrue();
