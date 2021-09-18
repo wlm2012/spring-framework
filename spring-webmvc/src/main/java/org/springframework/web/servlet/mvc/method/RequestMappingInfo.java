@@ -19,8 +19,8 @@ package org.springframework.web.servlet.mvc.method;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.lang.Nullable;
@@ -47,7 +47,7 @@ import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
- * Request mapping information. A composite for the the following conditions:
+ * Request mapping information. A composite for the following conditions:
  * <ol>
  * <li>{@link PathPatternsRequestCondition} with parsed {@code PathPatterns} or
  * {@link PatternsRequestCondition} with String patterns via {@code PathMatcher}

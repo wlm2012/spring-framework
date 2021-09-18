@@ -16,17 +16,18 @@
 
 package org.springframework.core;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow;
 import java.util.function.Function;
 
 import kotlinx.coroutines.CompletableDeferredKt;
 import kotlinx.coroutines.Deferred;
 import org.reactivestreams.Publisher;
+import reactor.adapter.JdkFlowAdapter;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.integration.BlockHoundIntegration;
 import reactor.core.publisher.Flux;
@@ -36,7 +37,6 @@ import rx.RxReactiveStreams;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * A registry of adapters to adapt Reactive Streams {@link Publisher} to/from
@@ -72,6 +72,8 @@ public class ReactiveAdapterRegistry {
 
 	private static final boolean kotlinCoroutinesPresent;
 
+	private static final boolean mutinyPresent;
+
 	static {
 		ClassLoader classLoader = ReactiveAdapterRegistry.class.getClassLoader();
 		reactorPresent = ClassUtils.isPresent("reactor.core.publisher.Flux", classLoader);
@@ -81,6 +83,7 @@ public class ReactiveAdapterRegistry {
 		rxjava3Present = ClassUtils.isPresent("io.reactivex.rxjava3.core.Flowable", classLoader);
 		flowPublisherPresent = ClassUtils.isPresent("java.util.concurrent.Flow.Publisher", classLoader);
 		kotlinCoroutinesPresent = ClassUtils.isPresent("kotlinx.coroutines.reactor.MonoKt", classLoader);
+		mutinyPresent = ClassUtils.isPresent("io.smallrye.mutiny.Multi", classLoader);
 	}
 
 	private final List<ReactiveAdapter> adapters = new ArrayList<>();
@@ -120,6 +123,11 @@ public class ReactiveAdapterRegistry {
 		// Kotlin Coroutines
 		if (reactorPresent && kotlinCoroutinesPresent) {
 			new CoroutinesRegistrar().registerAdapters(this);
+		}
+
+		// SmallRye Mutiny
+		if (mutinyPresent) {
+			new MutinyRegistrar().registerAdapters(this);
 		}
 	}
 
@@ -342,28 +350,12 @@ public class ReactiveAdapterRegistry {
 	private static class ReactorJdkFlowAdapterRegistrar {
 
 		void registerAdapter(ReactiveAdapterRegistry registry) {
-			// TODO: remove reflection when build requires JDK 9+
-
-			try {
-				String publisherName = "java.util.concurrent.Flow.Publisher";
-				Class<?> publisherClass = ClassUtils.forName(publisherName, getClass().getClassLoader());
-
-				String adapterName = "reactor.adapter.JdkFlowAdapter";
-				Class<?> flowAdapterClass = ClassUtils.forName(adapterName,  getClass().getClassLoader());
-
-				Method toFluxMethod = flowAdapterClass.getMethod("flowPublisherToFlux", publisherClass);
-				Method toFlowMethod = flowAdapterClass.getMethod("publisherToFlowPublisher", Publisher.class);
-				Object emptyFlow = ReflectionUtils.invokeMethod(toFlowMethod, null, Flux.empty());
-
-				registry.registerReactiveType(
-						ReactiveTypeDescriptor.multiValue(publisherClass, () -> emptyFlow),
-						source -> (Publisher<?>) ReflectionUtils.invokeMethod(toFluxMethod, null, source),
-						publisher -> ReflectionUtils.invokeMethod(toFlowMethod, null, publisher)
-				);
-			}
-			catch (Throwable ex) {
-				// Ignore
-			}
+			Flow.Publisher<?> emptyFlow = JdkFlowAdapter.publisherToFlowPublisher(Flux.empty());
+			registry.registerReactiveType(
+					ReactiveTypeDescriptor.multiValue(Flow.Publisher.class, () -> emptyFlow),
+					source -> JdkFlowAdapter.flowPublisherToFlux((Flow.Publisher<?>) source),
+					JdkFlowAdapter::publisherToFlowPublisher
+			);
 		}
 	}
 
@@ -413,6 +405,28 @@ public class ReactiveAdapterRegistry {
 					ReactiveTypeDescriptor.multiValue(kotlinx.coroutines.flow.Flow.class, kotlinx.coroutines.flow.FlowKt::emptyFlow),
 					source -> kotlinx.coroutines.reactor.ReactorFlowKt.asFlux((kotlinx.coroutines.flow.Flow<?>) source),
 					kotlinx.coroutines.reactive.ReactiveFlowKt::asFlow
+			);
+		}
+	}
+
+
+	private static class MutinyRegistrar {
+
+		void registerAdapters(ReactiveAdapterRegistry registry) {
+			registry.registerReactiveType(
+					ReactiveTypeDescriptor.singleOptionalValue(
+							io.smallrye.mutiny.Uni.class,
+							() -> io.smallrye.mutiny.Uni.createFrom().nothing()),
+					uni -> ((io.smallrye.mutiny.Uni<?>) uni).convert().toPublisher(),
+					publisher -> io.smallrye.mutiny.Uni.createFrom().publisher(publisher)
+			);
+
+			registry.registerReactiveType(
+					ReactiveTypeDescriptor.multiValue(
+							io.smallrye.mutiny.Multi.class,
+							() -> io.smallrye.mutiny.Multi.createFrom().empty()),
+					multi -> (io.smallrye.mutiny.Multi<?>) multi,
+					publisher -> io.smallrye.mutiny.Multi.createFrom().publisher(publisher)
 			);
 		}
 	}
