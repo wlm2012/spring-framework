@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,11 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.util.LinkedMultiValueMap;
@@ -374,10 +377,11 @@ class UriComponentsBuilderTests {
 		assertThat(result.getQuery()).isEqualTo("a=1");
 	}
 
-	@Test  // SPR-12771
-	void fromHttpRequestResetsPortBeforeSettingIt() {
+	@ParameterizedTest // gh-17368, gh-27097
+	@ValueSource(strings = {"https", "wss"})
+	void fromHttpRequestResetsPort443(String protocol) {
 		MockHttpServletRequest request = new MockHttpServletRequest();
-		request.addHeader("X-Forwarded-Proto", "https");
+		request.addHeader("X-Forwarded-Proto", protocol);
 		request.addHeader("X-Forwarded-Host", "84.198.58.199");
 		request.addHeader("X-Forwarded-Port", 443);
 		request.setScheme("http");
@@ -388,10 +392,31 @@ class UriComponentsBuilderTests {
 		HttpRequest httpRequest = new ServletServerHttpRequest(request);
 		UriComponents result = UriComponentsBuilder.fromHttpRequest(httpRequest).build();
 
-		assertThat(result.getScheme()).isEqualTo("https");
+		assertThat(result.getScheme()).isEqualTo(protocol);
 		assertThat(result.getHost()).isEqualTo("84.198.58.199");
 		assertThat(result.getPort()).isEqualTo(-1);
 		assertThat(result.getPath()).isEqualTo("/rest/mobile/users/1");
+	}
+
+	@ParameterizedTest // gh-27097
+	@ValueSource(strings = {"http", "ws"})
+	void fromHttpRequestResetsPort80(String protocol) {
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("X-Forwarded-Proto", protocol);
+		request.addHeader("X-Forwarded-Host", "84.198.58.199");
+		request.addHeader("X-Forwarded-Port", 80);
+		request.setScheme("http");
+		request.setServerName("example.com");
+		request.setServerPort(80);
+		request.setRequestURI("/path");
+
+		HttpRequest httpRequest = new ServletServerHttpRequest(request);
+		UriComponents result = UriComponentsBuilder.fromHttpRequest(httpRequest).build();
+
+		assertThat(result.getScheme()).isEqualTo(protocol);
+		assertThat(result.getHost()).isEqualTo("84.198.58.199");
+		assertThat(result.getPort()).isEqualTo(-1);
+		assertThat(result.getPath()).isEqualTo("/path");
 	}
 
 	@Test  // SPR-14761
@@ -656,6 +681,12 @@ class UriComponentsBuilderTests {
 	void fromHttpRequestWithEmptyScheme() {
 		HttpRequest request = new HttpRequest() {
 			@Override
+			public HttpMethod getMethod() {
+				return HttpMethod.GET;
+			}
+
+			@Override
+			@Deprecated
 			public String getMethodValue() {
 				return "GET";
 			}
@@ -1042,7 +1073,7 @@ class UriComponentsBuilderTests {
 		assertThat(result1.getPath()).isEqualTo("/p1/%s/%s", vars.get("ps1"), vars.get("ps2"));
 		assertThat(result1.getQuery()).isEqualTo("q1");
 		assertThat(result1.getFragment()).isEqualTo("f1");
-		assertThat(result1.getSchemeSpecificPart()).isEqualTo(null);
+		assertThat(result1.getSchemeSpecificPart()).isNull();
 
 		UriComponents result2 = builder2.build();
 		assertThat(result2.getScheme()).isEqualTo("http");
@@ -1051,7 +1082,7 @@ class UriComponentsBuilderTests {
 		assertThat(result2.getPath()).isEqualTo("/p1/%s/%s", vars.get("ps1"), vars.get("ps2"));
 		assertThat(result2.getQuery()).isEqualTo("q1");
 		assertThat(result2.getFragment()).isEqualTo("f1");
-		assertThat(result1.getSchemeSpecificPart()).isEqualTo(null);
+		assertThat(result1.getSchemeSpecificPart()).isNull();
 	}
 
 	@Test // gh-26466

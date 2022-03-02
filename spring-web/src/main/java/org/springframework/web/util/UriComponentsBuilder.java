@@ -85,7 +85,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 
 	private static final String HOST_PATTERN = "(" + HOST_IPV6_PATTERN + "|" + HOST_IPV4_PATTERN + ")";
 
-	private static final String PORT_PATTERN = "(\\{[^}]+}?|[^/?#]*)";
+	private static final String PORT_PATTERN = "(\\{[^}]+\\}?|[^/?#]*)";
 
 	private static final String PATH_PATTERN = "([^?#]*)";
 
@@ -364,7 +364,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 					}
 					host = value.substring(0, portSeparatorIdx);
 					try {
-						port = Integer.parseInt(value.substring(portSeparatorIdx + 1));
+						port = Integer.parseInt(value, portSeparatorIdx + 1, value.length(), 10);
 					}
 					catch (NumberFormatException ex) {
 						throw new IllegalArgumentException(
@@ -479,8 +479,9 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 			result = new OpaqueUriComponents(this.scheme, this.ssp, this.fragment);
 		}
 		else {
+			MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>(this.queryParams);
 			HierarchicalUriComponents uric = new HierarchicalUriComponents(this.scheme, this.fragment,
-					this.userInfo, this.host, this.port, this.pathBuilder.build(), this.queryParams,
+					this.userInfo, this.host, this.port, this.pathBuilder.build(), queryParams,
 					hint == EncodingHint.FULLY_ENCODED);
 			result = (hint == EncodingHint.ENCODE_TEMPLATE ? uric.encodeTemplate(this.charset) : uric);
 		}
@@ -881,8 +882,9 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 					"with the removeOnly=true. Request headers: " + headers);
 		}
 
-		if (this.scheme != null && ((this.scheme.equals("http") && "80".equals(this.port)) ||
-				(this.scheme.equals("https") && "443".equals(this.port)))) {
+		if (this.scheme != null &&
+				(((this.scheme.equals("http") || this.scheme.equals("ws")) && "80".equals(this.port)) ||
+				((this.scheme.equals("https") || this.scheme.equals("wss")) && "443".equals(this.port)))) {
 			port(null);
 		}
 
@@ -902,7 +904,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 				throw new IllegalArgumentException("Invalid IPv4 address: " + rawValue);
 			}
 			host(rawValue.substring(0, portSeparatorIdx));
-			port(Integer.parseInt(rawValue.substring(portSeparatorIdx + 1)));
+			port(Integer.parseInt(rawValue, portSeparatorIdx + 1, rawValue.length(), 10));
 		}
 		else {
 			host(rawValue);

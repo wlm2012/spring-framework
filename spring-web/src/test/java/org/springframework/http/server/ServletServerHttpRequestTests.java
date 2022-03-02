@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,6 +151,13 @@ public class ServletServerHttpRequestTests {
 		assertThat(headers.getContentType()).isNull();
 	}
 
+	@Test // gh-27957
+	void getHeadersWithWildcardContentType() {
+		mockRequest.setContentType("*/*");
+		mockRequest.removeHeader("Content-Type");
+		assertThat(request.getHeaders()).as("Invalid content-type should not raise exception").hasSize(0);
+	}
+
 	@Test
 	void getBody() throws IOException {
 		byte[] content = "Hello World".getBytes(StandardCharsets.UTF_8);
@@ -172,6 +179,16 @@ public class ServletServerHttpRequestTests {
 		byte[] result = FileCopyUtils.copyToByteArray(request.getBody());
 		byte[] content = "name+1=value+1&name+2=value+2%2B1&name+2=value+2%2B2&name+3".getBytes(
 				StandardCharsets.UTF_8);
+		assertThat(result).as("Invalid content returned").isEqualTo(content);
+	}
+
+	@Test
+	void getEmptyFormBody() throws IOException {
+		mockRequest.setContentType("application/x-www-form-urlencoded; charset=UTF-8");
+		mockRequest.setMethod("POST");
+
+		byte[] result = FileCopyUtils.copyToByteArray(request.getBody());
+		byte[] content = "".getBytes(StandardCharsets.UTF_8);
 		assertThat(result).as("Invalid content returned").isEqualTo(content);
 	}
 
