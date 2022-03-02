@@ -66,15 +66,14 @@ public interface ServerRequest {
 	 * @return the HTTP method as an HttpMethod enum value, or {@code null}
 	 * if not resolvable (e.g. in case of a non-standard HTTP method)
 	 */
-	@Nullable
-	default HttpMethod method() {
-		return HttpMethod.resolve(methodName());
-	}
+	HttpMethod method();
 
 	/**
 	 * Get the name of the HTTP method.
 	 * @return the HTTP method as a String
+	 * @deprecated in favor of {@link #method()}
 	 */
+	@Deprecated
 	String methodName();
 
 	/**
@@ -85,7 +84,6 @@ public interface ServerRequest {
 	/**
 	 * Get a {@code UriBuilderComponents} from the URI associated with this
 	 * {@code ServerRequest}.
-	 *
 	 * @return a URI builder
 	 */
 	UriBuilder uriBuilder();
@@ -260,7 +258,7 @@ public interface ServerRequest {
 	 * public ServerResponse myHandleMethod(ServerRequest request) {
 	 *   Instant lastModified = // application-specific calculation
 	 *	 return request.checkNotModified(lastModified)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });
@@ -294,7 +292,7 @@ public interface ServerRequest {
 	 * public ServerResponse myHandleMethod(ServerRequest request) {
 	 *   String eTag = // application-specific calculation
 	 *	 return request.checkNotModified(eTag)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });
@@ -331,7 +329,7 @@ public interface ServerRequest {
 	 *   Instant lastModified = // application-specific calculation
 	 *   String eTag = // application-specific calculation
 	 *	 return request.checkNotModified(lastModified, eTag)
-	 *	   .orElseGet(() -> {
+	 *	   .orElseGet(() -&gt; {
 	 *	     // further request processing, actually building content
 	 *		 return ServerResponse.ok().body(...);
 	 *	   });

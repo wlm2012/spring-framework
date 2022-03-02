@@ -27,7 +27,7 @@ dependencies {
 	optional("org.junit.jupiter:junit-jupiter-api")
 	optional("org.testng:testng")
 	optional("org.aspectj:aspectjweaver")
-	optional("org.codehaus.groovy:groovy")
+	optional("org.apache.groovy:groovy")
 	optional("org.hamcrest:hamcrest")
 	optional("net.sourceforge.htmlunit:htmlunit")
 	optional("org.seleniumhq.selenium:htmlunit-driver") {
@@ -59,9 +59,6 @@ dependencies {
 	testImplementation("org.hibernate:hibernate-core-jakarta")
 	testImplementation("org.hibernate:hibernate-validator")
 	testImplementation("jakarta.validation:jakarta.validation-api")
-	testImplementation("org.junit.platform:junit-platform-runner") {
-		exclude group: "junit", module: "junit"
-	}
 	testImplementation("org.junit.platform:junit-platform-testkit")
 	testImplementation("com.fasterxml.jackson.core:jackson-databind")
 	testImplementation("com.thoughtworks.xstream:xstream")
@@ -73,43 +70,33 @@ dependencies {
 	testRuntimeOnly("org.junit.vintage:junit-vintage-engine") {
 		exclude group: "junit", module: "junit"
 	}
+	testRuntimeOnly("org.junit.support:testng-engine")
 	testRuntimeOnly("org.glassfish:jakarta.el")
 	testRuntimeOnly("com.sun.xml.bind:jaxb-core")
 	testRuntimeOnly("com.sun.xml.bind:jaxb-impl")
 }
 
-task junit(type: Test) {
-	description = "Runs JUnit 4 and JUnit Jupiter tests."
+// Prevent xml-apis from being used so that the corresponding XML APIs from
+// the JDK's `java.xml` module are used instead. This allows spring-test to
+// build in Eclipse IDE which fails to compile if there is a split package
+// between a JDK system module and the unnamed module (for JARs on the
+// classpath).
+configurations.optional {
+	exclude group: "xml-apis", module: "xml-apis"
+}
+
+test {
+	description = "Runs JUnit 4, JUnit Jupiter, and TestNG tests."
 	useJUnitPlatform {
+		includeEngines "junit-vintage", "junit-jupiter", "testng"
 		excludeTags "failing-test-case"
 	}
+	// We use `include` instead of `filter.includeTestsMatching`, since
+	// the latter results in some tests being executed/reported
+	// multiple times.
 	include(["**/*Tests.class", "**/*Test.class"])
-	exclude(["**/testng/**/*.*"])
+	filter.excludeTestsMatching("*TestCase")
 	systemProperty("testGroups", project.properties.get("testGroups"))
 	// Java Util Logging for the JUnit Platform.
 	// systemProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager")
 }
-
-task testNG(type: Test) {
-	description = "Runs TestNG tests."
-	useTestNG()
-	include(["**/testng/**/*Tests.class", "**/testng/**/*Test.class"])
-	systemProperty("testGroups", project.properties.get("testGroups"))
-	// Show STD_OUT & STD_ERR of the test JVM(s) on the console:
-	// testLogging.showStandardStreams = true
-	// forkEvery 1
-}
-
-test {
-	description = "Runs all tests."
-	dependsOn junit, testNG
-	exclude(["**/*.*"])
-}
-
-task aggregateTestReports(type: TestReport) {
-	description = "Aggregates JUnit and TestNG test reports."
-	destinationDir = test.reports.html.outputLocation.get().getAsFile()
-	reportOn junit, testNG
-}
-
-check.dependsOn aggregateTestReports

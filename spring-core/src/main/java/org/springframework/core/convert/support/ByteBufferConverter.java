@@ -17,8 +17,6 @@
 package org.springframework.core.convert.support;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 import org.springframework.core.convert.ConversionService;
@@ -40,17 +38,11 @@ final class ByteBufferConverter implements ConditionalGenericConverter {
 
 	private static final TypeDescriptor BYTE_ARRAY_TYPE = TypeDescriptor.valueOf(byte[].class);
 
-	private static final Set<ConvertiblePair> CONVERTIBLE_PAIRS;
-
-	static {
-		Set<ConvertiblePair> convertiblePairs = new HashSet<>(4);
-		convertiblePairs.add(new ConvertiblePair(ByteBuffer.class, byte[].class));
-		convertiblePairs.add(new ConvertiblePair(byte[].class, ByteBuffer.class));
-		convertiblePairs.add(new ConvertiblePair(ByteBuffer.class, Object.class));
-		convertiblePairs.add(new ConvertiblePair(Object.class, ByteBuffer.class));
-		CONVERTIBLE_PAIRS = Collections.unmodifiableSet(convertiblePairs);
-	}
-
+	private static final Set<ConvertiblePair> CONVERTIBLE_PAIRS = Set.of(
+				new ConvertiblePair(ByteBuffer.class, byte[].class),
+				new ConvertiblePair(byte[].class, ByteBuffer.class),
+				new ConvertiblePair(ByteBuffer.class, Object.class),
+				new ConvertiblePair(Object.class, ByteBuffer.class));
 
 	private final ConversionService conversionService;
 
@@ -88,8 +80,7 @@ final class ByteBufferConverter implements ConditionalGenericConverter {
 	@Nullable
 	public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 		boolean byteBufferTarget = targetType.isAssignableTo(BYTE_BUFFER_TYPE);
-		if (source instanceof ByteBuffer) {
-			ByteBuffer buffer = (ByteBuffer) source;
+		if (source instanceof ByteBuffer buffer) {
 			return (byteBufferTarget ? buffer.duplicate() : convertFromByteBuffer(buffer, targetType));
 		}
 		if (byteBufferTarget) {

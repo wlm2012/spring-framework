@@ -117,10 +117,9 @@ import org.springframework.web.util.WebUtils;
  * {@link org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator}.
  *
  * <li>The dispatcher's strategy for resolving multipart requests is determined by a
- * {@link org.springframework.web.multipart.MultipartResolver} implementation.
- * Implementations for Apache Commons FileUpload and Servlet 3 are included; the typical
- * choice is {@link org.springframework.web.multipart.commons.CommonsMultipartResolver}.
- * The MultipartResolver bean name is "multipartResolver"; default is none.
+ * {@link org.springframework.web.multipart.MultipartResolver} implementation. An
+ * implementation for Servlet 3 is included. The MultipartResolver bean name is
+ * "multipartResolver"; default is none.
  *
  * <li>Its locale resolution strategy is determined by a {@link LocaleResolver}.
  * Out-of-the-box implementations work via HTTP accept header, cookie, or session.
@@ -365,7 +364,7 @@ public class DispatcherServlet extends FrameworkServlet {
 
 	/**
 	 * Create a new {@code DispatcherServlet} with the given web application context. This
-	 * constructor is useful in Servlet 3.0+ environments where instance-based registration
+	 * constructor is useful in Servlet environments where instance-based registration
 	 * of servlets is possible through the {@link ServletContext#addServlet} API.
 	 * <p>Using this constructor indicates that the following properties / init-params
 	 * will be ignored:
@@ -1267,7 +1266,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	}
 
 	/**
-	 * No handler found -> set appropriate HTTP response status.
+	 * No handler found &rarr; set appropriate HTTP response status.
 	 * @param request current HTTP request
 	 * @param response current HTTP response
 	 * @throws Exception if preparing the response failed
@@ -1394,6 +1393,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 		try {
 			if (mv.getStatus() != null) {
+				request.setAttribute(View.RESPONSE_STATUS_ATTRIBUTE, mv.getStatus());
 				response.setStatus(mv.getStatus().value());
 			}
 			view.render(mv.getModelInternal(), request, response);

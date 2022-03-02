@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import jakarta.activation.FileTypeMap;
 import jakarta.mail.BodyPart;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
+import jakarta.mail.Part;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeBodyPart;
@@ -91,6 +92,7 @@ import org.springframework.util.Assert;
  * on the MULTIPART_MODE constants contains more detailed information.
  *
  * @author Juergen Hoeller
+ * @author Sam Brannen
  * @since 19.01.2004
  * @see #setText(String, boolean)
  * @see #setText(String, String)
@@ -331,20 +333,18 @@ public class MimeMessageHelper {
 	 */
 	protected void createMimeMultiparts(MimeMessage mimeMessage, int multipartMode) throws MessagingException {
 		switch (multipartMode) {
-			case MULTIPART_MODE_NO:
-				setMimeMultiparts(null, null);
-				break;
-			case MULTIPART_MODE_MIXED:
+			case MULTIPART_MODE_NO -> setMimeMultiparts(null, null);
+			case MULTIPART_MODE_MIXED -> {
 				MimeMultipart mixedMultipart = new MimeMultipart(MULTIPART_SUBTYPE_MIXED);
 				mimeMessage.setContent(mixedMultipart);
 				setMimeMultiparts(mixedMultipart, mixedMultipart);
-				break;
-			case MULTIPART_MODE_RELATED:
+			}
+			case MULTIPART_MODE_RELATED -> {
 				MimeMultipart relatedMultipart = new MimeMultipart(MULTIPART_SUBTYPE_RELATED);
 				mimeMessage.setContent(relatedMultipart);
 				setMimeMultiparts(relatedMultipart, relatedMultipart);
-				break;
-			case MULTIPART_MODE_MIXED_RELATED:
+			}
+			case MULTIPART_MODE_MIXED_RELATED -> {
 				MimeMultipart rootMixedMultipart = new MimeMultipart(MULTIPART_SUBTYPE_MIXED);
 				mimeMessage.setContent(rootMixedMultipart);
 				MimeMultipart nestedRelatedMultipart = new MimeMultipart(MULTIPART_SUBTYPE_RELATED);
@@ -352,8 +352,8 @@ public class MimeMessageHelper {
 				relatedBodyPart.setContent(nestedRelatedMultipart);
 				rootMixedMultipart.addBodyPart(relatedBodyPart);
 				setMimeMultiparts(rootMixedMultipart, nestedRelatedMultipart);
-				break;
-			default:
+			}
+			default ->
 				throw new IllegalArgumentException("Only multipart modes MIXED_RELATED, RELATED and NO supported");
 		}
 	}
@@ -427,8 +427,8 @@ public class MimeMessageHelper {
 	 */
 	@Nullable
 	protected String getDefaultEncoding(MimeMessage mimeMessage) {
-		if (mimeMessage instanceof SmartMimeMessage) {
-			return ((SmartMimeMessage) mimeMessage).getDefaultEncoding();
+		if (mimeMessage instanceof SmartMimeMessage smartMimeMessage) {
+			return smartMimeMessage.getDefaultEncoding();
 		}
 		return null;
 	}
@@ -449,8 +449,8 @@ public class MimeMessageHelper {
 	 * @see ConfigurableMimeFileTypeMap
 	 */
 	protected FileTypeMap getDefaultFileTypeMap(MimeMessage mimeMessage) {
-		if (mimeMessage instanceof SmartMimeMessage) {
-			FileTypeMap fileTypeMap = ((SmartMimeMessage) mimeMessage).getDefaultFileTypeMap();
+		if (mimeMessage instanceof SmartMimeMessage smartMimeMessage) {
+			FileTypeMap fileTypeMap = smartMimeMessage.getDefaultFileTypeMap();
 			if (fileTypeMap != null) {
 				return fileTypeMap;
 			}
@@ -896,7 +896,7 @@ public class MimeMessageHelper {
 	 * <p><b>NOTE:</b> Invoke {@code addInline} <i>after</i> {@link #setText};
 	 * else, mail readers might not be able to resolve inline references correctly.
 	 * @param contentId the content ID to use. Will end up as "Content-ID" header
-	 * in the body part, surrounded by angle brackets: e.g. "myId" -> "&lt;myId&gt;".
+	 * in the body part, surrounded by angle brackets: e.g. "myId" &rarr; "&lt;myId&gt;".
 	 * Can be referenced in HTML source via src="cid:myId" expressions.
 	 * @param dataSource the {@code jakarta.activation.DataSource} to take
 	 * the content from, determining the InputStream and the content type
@@ -908,7 +908,7 @@ public class MimeMessageHelper {
 		Assert.notNull(contentId, "Content ID must not be null");
 		Assert.notNull(dataSource, "DataSource must not be null");
 		MimeBodyPart mimeBodyPart = new MimeBodyPart();
-		mimeBodyPart.setDisposition(MimeBodyPart.INLINE);
+		mimeBodyPart.setDisposition(Part.INLINE);
 		mimeBodyPart.setContentID("<" + contentId + ">");
 		mimeBodyPart.setDataHandler(new DataHandler(dataSource));
 		getMimeMultipart().addBodyPart(mimeBodyPart);
@@ -923,7 +923,7 @@ public class MimeMessageHelper {
 	 * <p><b>NOTE:</b> Invoke {@code addInline} <i>after</i> {@link #setText};
 	 * else, mail readers might not be able to resolve inline references correctly.
 	 * @param contentId the content ID to use. Will end up as "Content-ID" header
-	 * in the body part, surrounded by angle brackets: e.g. "myId" -> "&lt;myId&gt;".
+	 * in the body part, surrounded by angle brackets: e.g. "myId" &rarr; "&lt;myId&gt;".
 	 * Can be referenced in HTML source via src="cid:myId" expressions.
 	 * @param file the File resource to take the content from
 	 * @throws MessagingException in case of errors
@@ -950,7 +950,7 @@ public class MimeMessageHelper {
 	 * <p><b>NOTE:</b> Invoke {@code addInline} <i>after</i> {@link #setText};
 	 * else, mail readers might not be able to resolve inline references correctly.
 	 * @param contentId the content ID to use. Will end up as "Content-ID" header
-	 * in the body part, surrounded by angle brackets: e.g. "myId" -> "&lt;myId&gt;".
+	 * in the body part, surrounded by angle brackets: e.g. "myId" &rarr; "&lt;myId&gt;".
 	 * Can be referenced in HTML source via src="cid:myId" expressions.
 	 * @param resource the resource to take the content from
 	 * @throws MessagingException in case of errors
@@ -976,7 +976,7 @@ public class MimeMessageHelper {
 	 * <p><b>NOTE:</b> Invoke {@code addInline} <i>after</i> {@code setText};
 	 * else, mail readers might not be able to resolve inline references correctly.
 	 * @param contentId the content ID to use. Will end up as "Content-ID" header
-	 * in the body part, surrounded by angle brackets: e.g. "myId" -> "&lt;myId&gt;".
+	 * in the body part, surrounded by angle brackets: e.g. "myId" &rarr; "&lt;myId&gt;".
 	 * Can be referenced in HTML source via src="cid:myId" expressions.
 	 * @param inputStreamSource the resource to take the content from
 	 * @param contentType the content type to use for the element
@@ -990,7 +990,7 @@ public class MimeMessageHelper {
 			throws MessagingException {
 
 		Assert.notNull(inputStreamSource, "InputStreamSource must not be null");
-		if (inputStreamSource instanceof Resource && ((Resource) inputStreamSource).isOpen()) {
+		if (inputStreamSource instanceof Resource resource && resource.isOpen()) {
 			throw new IllegalArgumentException(
 					"Passed-in Resource contains an open stream: invalid argument. " +
 					"JavaMail requires an InputStreamSource that creates a fresh stream for every call.");
@@ -1018,7 +1018,7 @@ public class MimeMessageHelper {
 		Assert.notNull(dataSource, "DataSource must not be null");
 		try {
 			MimeBodyPart mimeBodyPart = new MimeBodyPart();
-			mimeBodyPart.setDisposition(MimeBodyPart.ATTACHMENT);
+			mimeBodyPart.setDisposition(Part.ATTACHMENT);
 			mimeBodyPart.setFileName(isEncodeFilenames() ?
 					MimeUtility.encodeText(attachmentFilename) : attachmentFilename);
 			mimeBodyPart.setDataHandler(new DataHandler(dataSource));
@@ -1095,7 +1095,7 @@ public class MimeMessageHelper {
 			throws MessagingException {
 
 		Assert.notNull(inputStreamSource, "InputStreamSource must not be null");
-		if (inputStreamSource instanceof Resource && ((Resource) inputStreamSource).isOpen()) {
+		if (inputStreamSource instanceof Resource resource && resource.isOpen()) {
 			throw new IllegalArgumentException(
 					"Passed-in Resource contains an open stream: invalid argument. " +
 					"JavaMail requires an InputStreamSource that creates a fresh stream for every call.");

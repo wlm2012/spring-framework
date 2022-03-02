@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 		try {
 			int separatorIndex = concurrency.indexOf('-');
 			if (separatorIndex != -1) {
-				setConcurrentConsumers(Integer.parseInt(concurrency.substring(separatorIndex + 1)));
+				setConcurrentConsumers(Integer.parseInt(concurrency, separatorIndex + 1, concurrency.length(), 10));
 			}
 			else {
 				setConcurrentConsumers(Integer.parseInt(concurrency));
@@ -177,7 +177,6 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 	 * {@link jakarta.jms.MessageListener} will work fine, in general.
 	 * @see #setConcurrentConsumers
 	 * @see org.springframework.core.task.SimpleAsyncTaskExecutor
-	 * @see org.springframework.scheduling.commonj.WorkManagerTaskExecutor
 	 */
 	public void setTaskExecutor(Executor taskExecutor) {
 		this.taskExecutor = taskExecutor;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -266,13 +266,14 @@ public abstract class SharedEntityManagerCreator {
 					this.targetFactory, this.properties, this.synchronizedWithTransaction);
 
 			switch (method.getName()) {
-				case "getTargetEntityManager":
+				case "getTargetEntityManager" -> {
 					// Handle EntityManagerProxy interface.
 					if (target == null) {
 						throw new IllegalStateException("No transactional EntityManager available");
 					}
 					return target;
-				case "unwrap":
+				}
+				case "unwrap" -> {
 					Class<?> targetClass = (Class<?>) args[0];
 					if (targetClass == null) {
 						return (target != null ? target : proxy);
@@ -281,8 +282,8 @@ public abstract class SharedEntityManagerCreator {
 					if (target == null) {
 						throw new IllegalStateException("No transactional EntityManager available");
 					}
-					// Still perform unwrap call on target EntityManager.
-					break;
+				}
+				// Still perform unwrap call on target EntityManager.
 			}
 
 			if (transactionRequiringMethods.contains(method.getName())) {
@@ -308,8 +309,7 @@ public abstract class SharedEntityManagerCreator {
 			// Invoke method on current EntityManager.
 			try {
 				Object result = method.invoke(target, args);
-				if (result instanceof Query) {
-					Query query = (Query) result;
+				if (result instanceof Query query) {
 					if (isNewEm) {
 						Class<?>[] ifcs = cachedQueryInterfaces.computeIfAbsent(query.getClass(), key ->
 								ClassUtils.getAllInterfacesForClass(key, this.proxyClassLoader));
@@ -419,8 +419,7 @@ public abstract class SharedEntityManagerCreator {
 				if (queryTerminatingMethods.contains(method.getName())) {
 					// Actual execution of the query: close the EntityManager right
 					// afterwards, since that was the only reason we kept it open.
-					if (this.outputParameters != null && this.target instanceof StoredProcedureQuery) {
-						StoredProcedureQuery storedProc = (StoredProcedureQuery) this.target;
+					if (this.outputParameters != null && this.target instanceof StoredProcedureQuery storedProc) {
 						for (Map.Entry<Object, Object> entry : this.outputParameters.entrySet()) {
 							try {
 								Object key = entry.getKey();
